@@ -6,6 +6,14 @@ Claude Code ships as a glibc binary. On Termux the usual way to run it is to wra
 
 > **Runtime only.** No memories, no plugins, no settings, no tokens. Your `~/.claude` is created fresh by Claude on first launch.
 
+## Demo — Claude explaining its own install
+
+Asked how it's running, Claude reads its own launcher on-device (Android 17, Pixel 9 Pro XL) and lays out the trick — the glibc-loader patch + `LD_PRELOAD` resolv shim, and the self-healing version rollback:
+
+![Claude explains the glibc loader + resolv shim](screenshots/claude-explains-native.png)
+
+![Claude explains its self-healing launcher](screenshots/claude-explains-selfhealing.png)
+
 ## Requirements
 
 - Termux on an **aarch64 / arm64** device
