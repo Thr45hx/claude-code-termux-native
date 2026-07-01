@@ -74,6 +74,23 @@ rm -rf ~/.claude ~/.local/share/claude
 - `claude` — the native launcher
 - `fix_resolv.c` — the DNS shim source (compiled at install time)
 
+## Part of the native-Termux CLI family
+
+One-command **native, no-proot** installers for AI coding CLIs on Termux — same toolkit, one per agent:
+
+- [claude-code-termux-native](https://github.com/Thr45hx/claude-code-termux-native) — Claude Code
+- [antigravity-cli-termux-native](https://github.com/Thr45hx/antigravity-cli-termux-native) — Google Antigravity
+- [grok-cli-termux-native](https://github.com/Thr45hx/grok-cli-termux-native) — xAI Grok Build
+- [opencode-termux-native](https://github.com/Thr45hx/opencode-termux-native) — OpenCode
+- [copilot-cli-termux-native](https://github.com/Thr45hx/copilot-cli-termux-native) — GitHub Copilot
+
+## Notes
+
+- **AI-assisted:** built and reverse-engineered with AI help — a daily-driver, not a toy. Provided as-is.
+- **Tested on:** Android 17, rooted **Pixel 9 Pro XL** (Tensor G4, aarch64).
+- **Root / no-root:** **No root required** — the DNS shim is fully userland (works on any Android, rooted or not).
+- **License:** [MIT](./LICENSE).
+
 ---
 
 Unofficial community project — not affiliated with Anthropic. Provided as-is, no warranty.
