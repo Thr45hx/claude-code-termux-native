@@ -64,6 +64,9 @@ if [ "$should_check" = 1 ]; then
     new_bin="$VERSIONS_DIR/$latest"
     if [ ! -f "$new_bin" ] && ! grep -qxF "$latest" "$BLOCKLIST" 2>/dev/null; then
       dl="https://downloads.claude.ai/claude-code-releases/$latest"
+      # The download is ~250 MB and blocks the launch (up to 300s). Announce it so a
+      # first-launch-after-release doesn't look like `claude` silently hung.
+      echo "[claude] new version $latest — downloading (~250 MB, one-time; may take a minute)…" >&2
       if curl -fsSL --max-time 300 "$dl/linux-arm64/claude" -o "$new_bin.tmp" 2>/dev/null; then
         exp=$(curl -fsSL --max-time 5 "$dl/manifest.json" 2>/dev/null | jq -er '.platforms["linux-arm64"].checksum' 2>/dev/null || echo "")
         act=$(sha256sum "$new_bin.tmp" | cut -d' ' -f1)
@@ -130,6 +133,20 @@ done
 if [ -z "$bin" ]; then
   echo "[claude] no working claude binary found in $VERSIONS_DIR. Re-run install.sh." >&2
   exit 1
+fi
+
+# Keep the official launcher symlink ~/.local/bin/claude pointing at the live binary.
+# The official installer creates that symlink; the version-GC above deletes superseded
+# binaries, so after an update the symlink can dangle -> a broken `claude` for anything
+# that resolves it (plus noisy "cannot execute: required file not found" from shells that
+# stat it). Repoint it to the chosen binary. Only touch a symlink or a missing path —
+# never clobber a real file placed there by another installer.
+LOCAL_LINK="/data/data/com.termux/files/home/.local/bin/claude"
+if [ -L "$LOCAL_LINK" ] || [ ! -e "$LOCAL_LINK" ]; then
+  if [ "$(readlink "$LOCAL_LINK" 2>/dev/null || true)" != "$bin" ]; then
+    mkdir -p "$(dirname "$LOCAL_LINK")" 2>/dev/null || true
+    ln -sf "$bin" "$LOCAL_LINK" 2>/dev/null || true
+  fi
 fi
 
 unset LD_PRELOAD
