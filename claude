@@ -118,6 +118,18 @@ for cand in $(ls -1 "$VERSIONS_DIR" 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9
   grep -qxF "$cand" "$BLOCKLIST" 2>/dev/null && continue
   cpath="$VERSIONS_DIR/$cand"
   [ -f "$cpath" ] || continue
+  # A hard power-off or OOM kill can leave a full-size file of zeros (or a
+  # partial download) and a .verified stamp that still names it. Never exec
+  # that: the failed start leaks glibc's library path onto sh/bash, which then
+  # dies with `CANNOT LINK EXECUTABLE "sh": ... has bad ELF magic`. Verify the
+  # ELF magic first; drop the file and any stale stamp, then fall through.
+  magic=$(od -An -t x1 -N 4 "$cpath" 2>/dev/null | tr -d ' \n')
+  if [ "$magic" != "7f454c46" ]; then
+    echo "[claude] $cand is damaged (not a program); removing it" >&2
+    rm -f "$cpath"
+    [ "$cand" = "$verified" ] && verified=""
+    continue
+  fi
   if [ "$cand" = "$verified" ]; then bin="$cpath"; break; fi
   interp=$(LD_PRELOAD= "$PATCHELF" --print-interpreter "$cpath" 2>/dev/null || echo unknown)
   [ "$interp" = "$GLIBC_LD" ] || LD_PRELOAD= "$PATCHELF" --set-interpreter "$GLIBC_LD" "$cpath" 2>/dev/null
