@@ -62,6 +62,17 @@ fi
 [ -x "$GL/bin/patchelf" ] || die "patchelf missing: $GL/bin/patchelf"
 [ -x "$GL/bin/ld" ]       || die "glibc ld missing: $GL/bin/ld"
 
+# 2a) Normalise libc.so: newer glibc builds ship it as a GNU ld linker SCRIPT
+#     (text, not ELF). During the -shared link in step 4, glibc ld pulls libc.so
+#     in transitively and dies parsing it with "invalid ELF header". Replace
+#     with a symlink to the real libc.so.6 ELF (standard glibc-distro layout).
+if [ -f "$GL/lib/libc.so" ] && head -1 "$GL/lib/libc.so" 2>/dev/null \
+     | grep -qE '^(GROUP|OUTPUT_FORMAT|INPUT|/\*)'; then
+  say "Replacing libc.so GNU-ld script with symlink to libc.so.6…"
+  mv "$GL/lib/libc.so" "$GL/lib/libc.so.linkerscript"
+  ln -sf libc.so.6 "$GL/lib/libc.so"
+fi
+
 # 3) DNS redirect target -----------------------------------------------------
 # Termux /etc is a read-only symlink to /system/etc, so /etc/resolv.conf can't
 # exist. The shim redirects reads of it to $RESOLV, which must hold nameservers.
@@ -78,7 +89,11 @@ cp "$SRC_DIR/fix_resolv.c" "$build/fix_resolv.c"
 (
   cd "$build"
   clang --target=aarch64-linux-gnu -fPIC -O2 -fno-stack-protector -c fix_resolv.c -o fix_resolv.o
-  "$GL/bin/ld" -shared -o libclaude-resolvfix.so fix_resolv.o -L"$GL/lib" -l:libc.so.6 -l:libdl.so.2
+  # Clear LD_PRELOAD* for the glibc ld invocation: Termux's bionic
+  # libtermux-exec-ld-preload.so is inherited into the ld process and crashes
+  # it with a missing symbol-version tag (preload is Bionic, ld is glibc).
+  env -u LD_PRELOAD -u LD_PRELOAD_64 -u LD_PRELOAD_32 \
+    "$GL/bin/ld" -shared -o libclaude-resolvfix.so fix_resolv.o -L"$GL/lib" -l:libc.so.6 -l:libdl.so.2
 ) || { rm -rf "$build"; die "shim compile/link failed."; }
 install -m644 "$build/libclaude-resolvfix.so" "$SHIM"
 rm -rf "$build"
